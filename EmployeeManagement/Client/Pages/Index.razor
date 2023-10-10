@@ -1,0 +1,51 @@
+﻿@page "/"
+@inject IJSRuntime jsRuntime
+
+<PageTitle>Employee Management</PageTitle>
+
+<h1>Hello, Employee!</h1>
+
+Welcome to your new app.
+
+<br />
+
+<div id="accordion">
+    <h3>Blazor</h3>
+    <div>
+        <p>
+            A Blazor application is a build-out of the things that make up websites, like HTML and CSS and also C# code. Blazor applications are built using Razor Components, which is an ASP.NET capability. These are the files consist of C# and HTML.
+        </p>
+    </div>
+    <h3>Blazor Web Assembly</h3>
+    <div>
+        <p>
+            In the client-side model (Blazor WebAssembly), the Blazor app, its dependencies, and the .NET runtime are downloaded to the browser, and the app is executed directly on the browser UI thread. All UI updates and event handling happen within the same process.
+        </p>
+    </div>
+    <h3>Blazor Server</h3>
+    <div>
+        <p>
+            In the server-side hosting model (Blazor Server-Side), Blazor is executed on the server from within an ASP.NET Core app. UI updates, event handling, and JavaScript calls are handled over a SignalR connection.
+        </p>
+    </div>
+</div>
+
+<br />
+
+<div class="jquery-btn">
+    <button>Click Me</button>
+</div>
+
+<br />
+
+<p>Clicked: <span class="click-count">0</span></p>
+
+<br />
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await jsRuntime.InvokeVoidAsync("renderjQueryComponents");
+        await base.OnAfterRenderAsync(firstRender);
+    }
+}

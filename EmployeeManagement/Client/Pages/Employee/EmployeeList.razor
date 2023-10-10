@@ -1,0 +1,159 @@
+﻿@page "/employee/employeelist"
+@using BlazorPagination
+@using EmployeeManagement.Shared.ViewModel
+@using Microsoft.EntityFrameworkCore;
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IJSRuntime jsRuntime
+@inject ILogger<EmployeeList> LoggerLog;
+
+<h3>Employee List</h3>
+<div class="row">
+    <div class="col-md-6">
+        <a href='/employee/addemployee' class="btn btn-primary" role="button">
+            <i class="fas fa-user-plus"></i>
+            Add Employee
+        </a>
+    </div>
+    <div class="input-group col">
+        <input type="text" class="form-control" placeholder="Search..."
+        @bind="SearchString" @bind:event="oninput" @onkeyup="FilterUser" />
+        @if (SearchString.Length > 0)
+        {
+            <div class="input-group-append">
+                <button class="btn btn-danger" @onclick="ResetSearch">
+                    <i class="fas fa-times"></i>
+                    Reset
+                </button>
+            </div>
+        }
+    </div>
+</div>
+<br />
+@if (employeeList == null)
+    {
+        <tr>
+            <td colspan="8" align="center">No Data Found</td>
+        </tr>
+    }
+else
+{
+    <table class="table">
+        <thead>
+              <tr>
+                    <th>Employee Id</th>
+                    <th class="sort @sortclass("EmployeeName")" @onclick="@( () => Sort("EmployeeName"))">Employee Name</th>
+                    <th>Email Id</th>
+                    <th>Department</th>
+                    <th>Date Of Joining</th>
+                    <th></th>
+              </tr>
+          </thead>
+          <tbody>       
+             @foreach (var employee in employeeList.Results)
+                 {
+                   <tr>
+                      <td>@employee.EmployeeId</td>
+                      <td>@employee.EmployeeName</td>
+                      <td>@employee.EmailId</td>
+                      <td>@employee.DepartmentId</td>
+                      <td>@employee.Doj</td>
+                      <td>
+                         <a href='/employee/edit/@employee.EmployeeId' class="btn btn-outline-dark" role="button">
+                             Edit
+                         </a>
+                         <a href='/employee/delete/@employee.EmployeeId' class="btn btn-outline-danger" role="button">
+                             Delete
+                         </a>
+                      </td>
+                   </tr>
+                  }
+          </tbody>
+      </table>
+      <BlazorPager CurrentPage="@employeeList.CurrentPage"
+                 PageCount="@employeeList.PageCount"
+                 VisiblePages="5"
+                 ShowFirstLast="true"
+                 ShowPageNumbers="true"
+                 FirstText="&laquo;"
+                 LastText="&raquo;"
+                 NextText="&rsaquo;"
+                 PreviousText="&lsaquo;"
+                 OnPageChanged="(async e => { _page = e; await GetEmployees(_page, employeeList.PageSize, _sort, _direction);})">
+    </BlazorPager>
+   }
+
+@code {
+    protected GridParameterViewModel employeeList = new();
+    protected List<EmployeeViewModel> searchEmployeeData = new();
+    protected EmployeeViewModel employee = new();
+    protected string SearchString { get; set; } = string.Empty;
+
+    private PagedResult<List<EmployeeViewModel>> _data;
+    private int _page = 1;
+    private string _sort = "EmployeeName";
+    private string _direction = "asc";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await jsRuntime.InvokeVoidAsync("renderPaginationIcon");
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetEmployees(_page, employeeList.PageSize, _sort, _direction);
+    }
+
+    protected async Task GetEmployees(int page, int pageSize, string sortColumn, string sortDirection)
+    {
+        LoggerLog.LogDebug("GetEmployees method Called");
+        employeeList = await Http.GetFromJsonAsync<GridParameterViewModel>($"api/Employee/GetEmployees/{page}/{pageSize}/{sortColumn}/{sortDirection}");
+        searchEmployeeData = employeeList.Results;
+        StateHasChanged();
+        LoggerLog.LogInformation($"{employeeList.Results.Count} items are loaded");
+        LoggerLog.LogDebug("GetEmployees call ended");
+    }
+
+    protected void FilterUser()
+    {
+        if (!string.IsNullOrEmpty(SearchString))
+        {
+            employeeList.Results = searchEmployeeData
+                .Where(x => x.EmployeeName?.IndexOf(SearchString, StringComparison.OrdinalIgnoreCase) != -1)
+                .ToList();
+        }
+        else
+        {
+            employeeList.Results = searchEmployeeData;
+        }
+    }
+
+    protected void DeleteConfirm(int employeeID)
+    {
+        employee = employeeList.Results.FirstOrDefault(x => x.EmployeeId == employeeID);
+    }
+
+    public void ResetSearch()
+    {
+        SearchString = string.Empty;
+        employeeList.Results = searchEmployeeData;
+    }
+
+    private async Task GetData()
+    {
+        StateHasChanged();
+    }
+    private async void Sort(string column)
+    {
+        _direction = _sort == column ? _direction == "asc" ? "desc" : "asc" : "asc";
+        _sort = column;
+        await GetData();
+    }
+
+    // sets css class to display up and down arrows
+    private string sortclass(string x)
+    {
+        return x == _sort ? _direction == "desc" ? "desc" : "asc" : "";
+    }
+}
